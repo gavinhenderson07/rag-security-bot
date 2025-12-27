@@ -71,26 +71,42 @@ def convert_chunks(text_chunks, model):
 
 vectors = convert_chunks(text_chunks, model)
 
+#create the dataframe to hold chunks and vectors with pandas
+def create_dataframe(text_chunks, vectors):
+    data = {
+        "text_chunks": text_chunks,
+        "vectors": list(vectors.numpy())
+    }
+
+    df = pd.DataFrame(data)
+    return df
+
+df = create_dataframe(text_chunks, vectors)
+
 #using the model, vectors, chunks, and user question
 #find the cosine similarity (ie closest related vector) using numpy
 #to closely relate the question to the answer text
-def search_index(vectors, model, text_chunks, query):
-    #model expects an input of a list
+def search_index(dataframe, query, model):
+    #pass in the query, df, and model to find closest related chunk
     query_vector = model([query])
+    
+    #create a matrix from the vectors in the dataframe
+    matrix = np.stack(dataframe['vectors'].values)
 
-    #use np to calculate inner product (dot product) with
-    #query vector against all chunk vectors
-    #add [0] to get the scores as a 1D array, which argmax() needs
-    scores = np.inner(query_vector, vectors)[0]
+    #find cosine similarity using np.inner() and grab the first (only) row
+    answer_similarities = np.inner(query_vector, matrix)[0]
 
-    #find the index with the vector with the best match
-    answer_vector = np.argmax(scores)
+    #find the index of the highest similarity score
+    best_match_idx = np.argmax(answer_similarities)
 
-    return text_chunks[answer_vector], scores[answer_vector]
+    #fetch the corresponding row from the dataframe
+    result_row = dataframe.iloc[best_match_idx]
 
-test_query = "How do I deal with and dispose of ransomeware?"
-result, score = search_index(vectors, model, text_chunks, test_query)
+    return result_row['text_chunks'], answer_similarities[best_match_idx]
 
-print(f"Query: {test_query}")
-print(f"Best Match Score: {score}")
-print(f"Retrieved Chunk: {result}")
+test_query = "How do I remove ransomeware on my computer?"
+best_chunk, similarity = search_index(df, test_query, model)
+print(f"Example Query: {test_query}.")
+print(f"Chunk found: {best_chunk}")
+print(f"Similarity: {similarity}")
+
