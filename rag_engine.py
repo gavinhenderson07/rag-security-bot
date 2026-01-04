@@ -6,6 +6,9 @@ import tensorflow as tf
 import tensorflow_hub as hub
 import pandas as pd
 import numpy as np
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
 
 
 #open file and read the content
@@ -23,10 +26,6 @@ def clean_text(content):
     content = re.sub(r'\n', ' ', content)
 
     return content
-
-#load and clean data for further processing
-raw_data = load_text('knowledge.txt')
-clean_data = clean_text(raw_data)
 
 
 def chunk_text(content, chunk_size=200, overlap=50):
@@ -49,7 +48,6 @@ def chunk_text(content, chunk_size=200, overlap=50):
         chunks.append(chunk)
     return chunks
 
-text_chunks = chunk_text(clean_data)
 
 
 #load in and create the model from the url 
@@ -60,7 +58,6 @@ def load_embedding_model():
     print("Model loaded successfully!")
     return model
 
-model = load_embedding_model()
 
 #convert chunks from strings into vectors
 #pass strings into model to turn into vectors
@@ -69,7 +66,6 @@ def convert_chunks(text_chunks, model):
 
     return vectors
 
-vectors = convert_chunks(text_chunks, model)
 
 #create the dataframe to hold chunks and vectors with pandas
 def create_dataframe(text_chunks, vectors):
@@ -81,7 +77,6 @@ def create_dataframe(text_chunks, vectors):
     df = pd.DataFrame(data)
     return df
 
-df = create_dataframe(text_chunks, vectors)
 
 #using the model, vectors, chunks, and user question
 #find the cosine similarity (ie closest related vector) using numpy
@@ -104,9 +99,48 @@ def search_index(dataframe, query, model):
 
     return result_row['text_chunks'], answer_similarities[best_match_idx]
 
-test_query = "How do I remove ransomeware on my computer?"
-best_chunk, similarity = search_index(df, test_query, model)
-print(f"Example Query: {test_query}.")
-print(f"Chunk found: {best_chunk}")
-print(f"Similarity: {similarity}")
 
+#use OpenAI api to generate final answer based on best chunk found
+#set up OpenAI Clien and load env variables
+load_dotenv()
+client = OpenAI()
+
+def generate_answer(query, best_chunk):
+    #set the message to feed the model
+    #include system prompt and user prompt with context
+    messages = [
+        {"role": "system", "content": "You are a helpful Cybersecurity assistant that provides accurate and concise answers based on the provided context."},
+        {"role": "user", "content": f"Context: {best_chunk:} Question: {query}"}
+    ]
+
+    #call the openai chat to generate the answer
+    response = client.chat.completions.create(
+        model = "gpt-3.5-turbo",
+        messages = messages,
+        temperature = 0.5
+    )
+
+    #extract the first answer from the model's response
+    answer = response.choices[0].message.content
+    return answer
+
+if __name__ == "__main__":
+    print("--- Starting Test Run ---")
+    
+    # 1. Load the raw data
+    raw_text = load_text("knowledge.txt")
+    cleaned_text = clean_text(raw_text)
+    chunks = chunk_text(cleaned_text)
+    
+    # 2. Build the 'Brain'
+    model = load_embedding_model()
+    vectors = convert_chunks(chunks, model)
+    df = create_dataframe(chunks, vectors)
+    
+    # 3. Test a question
+    test_query = "How do I remove ransomware?"
+    best_chunk, similarity = search_index(df, test_query, model)
+    
+    # 4. See the result
+    final_answer = generate_answer(test_query, best_chunk)
+    print(f"AI Answer: {final_answer}")
