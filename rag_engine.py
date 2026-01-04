@@ -7,7 +7,6 @@ import tensorflow_hub as hub
 import pandas as pd
 import numpy as np
 from openai import OpenAI
-import os
 from dotenv import load_dotenv
 
 

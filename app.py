@@ -1,6 +1,6 @@
 import streamlit as st
 import rag_engine
-import os
+
 
 #set page config
 st.set_page_config(page_title="Cybersecurity RAG Chatbot", page_icon=":shield:", layout="wide")
