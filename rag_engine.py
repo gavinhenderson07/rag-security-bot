@@ -1,6 +1,10 @@
 #Gavin's RAG Engine Personal Project
 #December, 2025
 
+import os
+# Force TF Hub to save the model in a permanent folder inside your project
+os.environ["TFHUB_CACHE_DIR"] = os.path.join(os.getcwd(), "model_cache")
+
 import re
 import tensorflow as tf
 import tensorflow_hub as hub
