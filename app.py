@@ -9,14 +9,11 @@ st.set_page_config(page_title="Cybersecurity RAG Chatbot", page_icon=":shield:",
 #load in model and info at startup, only once (avoiding reloading on every interaction)
 @st.cache_resource
 def startup():
-    #run rag_engine functions to load and process knowledge base
-    raw_text = rag_engine.load_text("knowledge.txt")
-    clean_text = rag_engine.clean_text(raw_text)
-    chunks = rag_engine.chunk_text(clean_text)
-
+    # Load the model first so we can pass it to the database function
     model = rag_engine.load_embedding_model()
-    vectors = rag_engine.convert_chunks(chunks, model)
-    df = rag_engine.create_dataframe(chunks, vectors)
+    
+    # This will load the .pkl file instantly, or build it if it's the first run
+    df = rag_engine.get_or_create_db(model, "knowledge.txt")
 
     return df, model
 
