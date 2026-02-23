@@ -104,22 +104,22 @@ def search_index(dataframe, query, model):
 
 
 def get_or_create_db(model, file_path="knowledge.txt", db_path="vector_db.pkl"):
-    # Check if the database file already exists
+    #check if the database file already exists
     if os.path.exists(db_path):
         print("Loading saved vector database from disk...")
-        # Instantly load the pre-computed DataFrame
+        #instantly load the pre-computed DataFrame
         return pd.read_pickle(db_path)
         
     else:
         print("Building vector database from scratch...")
-        # Run your original pipeline
+        #run your original pipeline
         raw_text = load_text(file_path)
         cleaned = clean_text(raw_text)
         chunks = chunk_text(cleaned)
         vectors = convert_chunks(chunks, model)
         df = create_dataframe(chunks, vectors)
         
-        # Save the DataFrame to your hard drive
+        #save the DataFrame to your hard drive
         df.to_pickle(db_path)
         print("Database saved locally!")
         

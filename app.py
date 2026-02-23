@@ -1,5 +1,7 @@
 import streamlit as st
 import rag_engine
+import cve_ingest
+import pandas as pd
 
 
 #set page config
@@ -9,12 +11,21 @@ st.set_page_config(page_title="Cybersecurity RAG Chatbot", page_icon=":shield:",
 #load in model and info at startup, only once (avoiding reloading on every interaction)
 @st.cache_resource
 def startup():
-    # Load the model first so we can pass it to the database function
+    #guarantee the foundational NIST playbook is built first
     model = rag_engine.load_embedding_model()
+    rag_engine.get_or_create_db(model, "knowledge.txt") 
     
-    # This will load the .pkl file instantly, or build it if it's the first run
-    df = rag_engine.get_or_create_db(model, "knowledge.txt")
-
+    #check for new daily threats
+    print("Checking for daily threat intelligence updates...")
+    raw_data = cve_ingest.fetch_cve_data()
+    if raw_data:
+        parsed_data = cve_ingest.parse_cve_data(raw_data)
+        # This safely ignores duplicates and appends new data
+        cve_ingest.update_knowledge_base(parsed_data)
+        
+    #load the final, fully-updated database into memory
+    df = pd.read_pickle("vector_db.pkl")
+    
     return df, model
 
 
