@@ -33,6 +33,29 @@ def startup():
 def main():
     st.title("Cybersecurity RAG Chatbot Assistant :shield:")
 
+
+    #ADMIN SIDEBAR
+    st.sidebar.header("Admin Controls")
+    st.sidebar.write("Manually trigger the threat intelligence pipeline.")
+    
+    #when clicked, this button runs the ingestion script
+    if st.sidebar.button("Pull Latest Threat Data"):
+        with st.spinner("Fetching latest CVEs from NVD..."):
+            
+            raw_data = cve_ingest.fetch_cve_data()
+            if raw_data:
+                parsed_data = cve_ingest.parse_cve_data(raw_data)
+                cve_ingest.update_knowledge_base(parsed_data)
+                
+                # Wipe Streamlit's memory so it knows the database changed
+                startup.clear() 
+                
+                # Refresh the web page
+                st.rerun()
+            else:
+                st.sidebar.error("Failed to reach NVD API.")
+    # ---------------------------
+
     #load in data and model one time
     with st.spinner("Loading knowledge base and embedding model..."):
         df, model = startup()

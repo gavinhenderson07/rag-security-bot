@@ -84,7 +84,7 @@ def create_dataframe(text_chunks, vectors):
 #using the model, vectors, chunks, and user question
 #find the cosine similarity (ie closest related vector) using numpy
 #to closely relate the question to the answer text
-def search_index(dataframe, query, model):
+def search_index(dataframe, query, model, top_k=3):
     #pass in the query, df, and model to find closest related chunk
     query_vector = model([query])
     
@@ -94,13 +94,18 @@ def search_index(dataframe, query, model):
     #find cosine similarity using np.inner() and grab the first (only) row
     answer_similarities = np.inner(query_vector, matrix)[0]
 
-    #find the index of the highest similarity score
-    best_match_idx = np.argmax(answer_similarities)
+    #find the top k similar chunks for more context retention
+    top_k_indices = np.argsort(answer_similarities)[-top_k:][::-1]
 
-    #fetch the corresponding row from the dataframe
-    result_row = dataframe.iloc[best_match_idx]
+    #grab the top chunks and their similarities for the bot
+    best_scores = answer_similarities[top_k_indices]
+    best_chunks = dataframe.iloc[top_k_indices]['text_chunks'].to_list()
 
-    return result_row['text_chunks'], answer_similarities[best_match_idx]
+    #join the list of top chunks to use for context
+    combined_best = "\n\n --New Chunk-- \n\n".join(best_chunks)
+
+
+    return combined_best, best_scores[0]
 
 
 def get_or_create_db(model, file_path="knowledge.txt", db_path="vector_db.pkl"):
